@@ -9,7 +9,10 @@ from decision_agent import create_final_trade_decider
 from graph_util import TechnicalTools
 from indicator_agent import create_indicator_agent
 from pattern_agent import create_pattern_agent
+from regime_agent import create_regime_agent
 from trend_agent import create_trend_agent
+from concordance_agent import create_concordance_agent
+from confidence_agent import create_confidence_agent
 
 
 class SetGraph:
@@ -29,7 +32,10 @@ class SetGraph:
         # Create analyst nodes
         agent_nodes = {}
         tool_nodes = {}
-        all_agents = ["indicator", "pattern", "trend"]
+        all_agents = ["regime", "indicator", "pattern", "trend", "concordance", "confidence"]
+
+        # create nodes for regime agent
+        agent_nodes["regime"] = create_regime_agent(self.graph_llm, self.toolkit)
 
         # create nodes for indicator agent
         agent_nodes["indicator"] = create_indicator_agent(self.graph_llm, self.toolkit)
@@ -47,6 +53,12 @@ class SetGraph:
         )
         # tool_nodes["trend"] = self.tool_nodes["trend"]
 
+        # create nodes for concordance agent
+        agent_nodes["concordance"] = create_concordance_agent(self.graph_llm)
+
+        # create nodes for confidence agent
+        agent_nodes["confidence"] = create_confidence_agent(self.graph_llm)
+
         # create nodes for decision agent
         decision_agent_node = create_final_trade_decider(self.graph_llm)
 
@@ -61,7 +73,7 @@ class SetGraph:
         graph.add_node("Decision Maker", decision_agent_node)
 
         # set start of graph
-        graph.add_edge(START, "Indicator Agent")
+        graph.add_edge(START, "Regime Agent")
 
         # add edges to graph
         for i, agent_type in enumerate(all_agents):

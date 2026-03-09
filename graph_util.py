@@ -11,8 +11,13 @@ import talib
 from langchain_core.tools import tool
 
 import color_style as color
+from pathlib import Path
 
 matplotlib.use("Agg")
+
+# Define global output directory one level back from project root
+OUTPUT_DIR = Path(__file__).parent.parent / "outputs"
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # helper function for trending graph
@@ -231,7 +236,7 @@ class TechnicalTools:
 
         # save fig locally
         fig.savefig(
-            "trend_graph.png",
+            OUTPUT_DIR / "trend_graph.png",
             format="png",
             dpi=600,
             bbox_inches="tight",
@@ -277,7 +282,7 @@ class TechnicalTools:
         # take recent 40
         df = df.tail(40)
 
-        df.to_csv("record.csv", index=False, date_format="%Y-%m-%d %H:%M:%S")
+        df.to_csv(OUTPUT_DIR / "record.csv", index=False, date_format="%Y-%m-%d %H:%M:%S")
         try:
             # df.index = pd.to_datetime(df["Datetime"])
             df.index = pd.to_datetime(df["Datetime"], format="%Y-%m-%d %H:%M:%S")
@@ -298,7 +303,7 @@ class TechnicalTools:
         axlist[0].set_xlabel("Datetime", fontweight="normal")
 
         fig.savefig(
-            fname="kline_chart.png",
+            fname=OUTPUT_DIR / "kline_chart.png",
             dpi=600,
             bbox_inches="tight",
             pad_inches=0.1,
@@ -459,3 +464,37 @@ class TechnicalTools:
         df = pd.DataFrame(kline_data)
         willr = talib.WILLR(df["High"], df["Low"], df["Close"], timeperiod=period)
         return {"willr": willr.fillna(0).round(2).tolist()[-28:]}
+
+    @staticmethod
+    @tool
+    def compute_adx(
+        kline_data: Annotated[
+            dict,
+            "Dictionary with 'High', 'Low', and 'Close' keys containing float lists.",
+        ],
+        period: Annotated[int, "Lookback period for ADX calculation"] = 14,
+    ) -> dict:
+        """
+        Compute the Average Directional Index (ADX) using TA-Lib.
+        ADX measures the strength of a trend. Values above 25 indicate a strong trend.
+        """
+        df = pd.DataFrame(kline_data)
+        adx = talib.ADX(df["High"], df["Low"], df["Close"], timeperiod=period)
+        return {"adx": adx.fillna(0).round(2).tolist()[-28:]}
+
+    @staticmethod
+    @tool
+    def compute_atr(
+        kline_data: Annotated[
+            dict,
+            "Dictionary with 'High', 'Low', and 'Close' keys containing float lists.",
+        ],
+        period: Annotated[int, "Lookback period for ATR calculation"] = 14,
+    ) -> dict:
+        """
+        Compute the Average True Range (ATR) using TA-Lib.
+        ATR is a measure of volatility.
+        """
+        df = pd.DataFrame(kline_data)
+        atr = talib.ATR(df["High"], df["Low"], df["Close"], timeperiod=period)
+        return {"atr": atr.fillna(0).round(2).tolist()[-28:]}

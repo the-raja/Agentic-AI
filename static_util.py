@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import mplfinance as mpf
 import numpy as np
 import pandas as pd
+from pathlib import Path
 
 import color_style as color
 from graph_util import (
@@ -16,6 +17,10 @@ from graph_util import (
 )
 
 matplotlib.use("Agg")
+
+# Define global output directory one level back from project root
+OUTPUT_DIR = Path(__file__).parent.parent / "outputs"
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def generate_kline_image(kline_data) -> dict:
@@ -34,7 +39,7 @@ def generate_kline_image(kline_data) -> dict:
     # take recent 40
     df = df.tail(40)
 
-    df.to_csv("record.csv", index=False, date_format="%Y-%m-%d %H:%M:%S")
+    df.to_csv(OUTPUT_DIR / "record.csv", index=False, date_format="%Y-%m-%d %H:%M:%S")
     try:
         # df.index = pd.to_datetime(df["Datetime"])
         df.index = pd.to_datetime(df["Datetime"], format="%Y-%m-%d %H:%M:%S")
@@ -55,7 +60,7 @@ def generate_kline_image(kline_data) -> dict:
     axlist[0].set_xlabel("Datetime", fontweight="normal")
 
     fig.savefig(
-        fname="kline_chart.png",
+        fname=OUTPUT_DIR / "kline_chart.png",
         dpi=600,
         bbox_inches="tight",
         pad_inches=0.1,
@@ -143,7 +148,7 @@ def generate_trend_image(kline_data) -> dict:
 
     # save fig locally
     fig.savefig(
-        "trend_graph.png", format="png", dpi=600, bbox_inches="tight", pad_inches=0.1
+        OUTPUT_DIR / "trend_graph.png", format="png", dpi=600, bbox_inches="tight", pad_inches=0.1
     )
     plt.close(fig)
 

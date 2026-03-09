@@ -25,6 +25,11 @@ class IndicatorAgentState(TypedDict):
         str, "Final indicator agent summary report to be used by downstream agents"
     ]
 
+    # Regime Agent
+    regime_report: Annotated[
+        str, "Final market regime summary report (trending vs ranging, volatility)"
+    ]
+
     # Pattern Agent
     pattern_image: Annotated[
         str, "Base64-encoded K-line chart for pattern recognition agent use"
@@ -54,6 +59,19 @@ class IndicatorAgentState(TypedDict):
     trend_report: Annotated[
         str,
         "Final trend analysis summary, describing structure, directional bias, and technical observations for downstream agents",
+    ]
+
+    # Concordance Agent
+    concordance_report: Annotated[
+        str, "Report on signal alignment and confluence across all analyst agents"
+    ]
+
+    # Confidence Agent
+    confidence_report: Annotated[
+        str, "Detailed breakdown of confidence levels based on signal strength"
+    ]
+    confidence_score: Annotated[
+        float, "Numerical confidence score (0-100) for the trade setup"
     ]
 
     # Final analysis and messaging context
