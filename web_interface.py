@@ -11,6 +11,12 @@ import yfinance as yf
 from flask import Flask, jsonify, render_template, request, send_file
 from openai import OpenAI
 
+from pathlib import Path
+
+# Define global output directory one level back from project root
+OUTPUT_DIR = Path(__file__).parent.parent / "outputs"
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
 import static_util
 from trading_graph import TradingGraph
 
@@ -308,6 +314,35 @@ class WebTradingAnalyzer:
             p_image = static_util.generate_kline_image(df_slice_dict)
             t_image = static_util.generate_trend_image(df_slice_dict)
 
+            # --- Prepare and Save Initial/Partial Report ---
+            reports_dir = OUTPUT_DIR / "reports"
+            reports_dir.mkdir(exist_ok=True)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            report_filename = reports_dir / f"report_{asset_name}_{timeframe}_{timestamp}.txt"
+            
+            with open(report_filename, "w", encoding="utf-8") as f:
+                f.write(f"QUANTAGENT ANALYSIS REPORT (INITIAL/PARTIAL)\n")
+                f.write(f"============================================\n")
+                f.write(f"Asset: {asset_name}\n")
+                f.write(f"Timeframe: {display_timeframe}\n")
+                f.write(f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write(f"Status: Data Fetched & Charts Generated. Attempting AI Analysis...\n\n")
+                f.write(f"AGENT PIPELINE:\n")
+                f.write(f"- [OK] Data Loader\n")
+                f.write(f"- [OK] Chart Generators (K-Line & Trend)\n")
+                f.write(f"- [..] Regime Agent\n")
+                f.write(f"- [..] Indicator Agent\n")
+                f.write(f"- [..] Pattern Agent\n")
+                f.write(f"- [..] Trend Agent\n")
+                f.write(f"- [..] Concordance Agent\n")
+                f.write(f"- [..] Confidence Agent\n")
+                f.write(f"- [..] Decision Maker\n\n")
+                f.write(f"DATA SUMMARY:\n")
+                f.write(f"- Data Points: {len(df_slice)}\n")
+                f.write(f"- Start: {df_slice_dict['Datetime'][0]}\n")
+                f.write(f"- End: {df_slice_dict['Datetime'][-1]}\n")
+                f.write(f"- Last Close: {df_slice_dict['Close'][-1]}\n\n")
+
             # Create initial state
             initial_state = {
                 "kline_data": df_slice_dict,
@@ -320,15 +355,63 @@ class WebTradingAnalyzer:
             }
 
             # Run the trading graph
-            final_state = self.trading_graph.graph.invoke(initial_state)
-
-            return {
-                "success": True,
-                "final_state": final_state,
-                "asset_name": asset_name,
-                "timeframe": display_timeframe,
-                "data_length": len(df_slice),
-            }
+            try:
+                final_state = self.trading_graph.graph.invoke(initial_state)
+                
+                # Update the report with full analysis
+                with open(report_filename, "a", encoding="utf-8") as f:
+                    f.write(f"AI ANALYSIS COMPLETED SUCCESSFULLY\n")
+                    f.write(f"=================================\n\n")
+                    f.write(f"1. MARKET REGIME ANALYSIS\n")
+                    f.write(f"-------------------------\n")
+                    f.write(f"{final_state.get('regime_report', 'N/A')}\n\n")
+                    
+                    f.write(f"2. TECHNICAL INDICATOR ANALYSIS\n")
+                    f.write(f"-------------------------------\n")
+                    f.write(f"{final_state.get('indicator_report', 'N/A')}\n\n")
+                    
+                    f.write(f"3. PATTERN RECOGNITION REPORT\n")
+                    f.write(f"-----------------------------\n")
+                    f.write(f"{final_state.get('pattern_report', 'N/A')}\n\n")
+                    
+                    f.write(f"4. TREND ANALYSIS REPORT\n")
+                    f.write(f"------------------------\n")
+                    f.write(f"{final_state.get('trend_report', 'N/A')}\n\n")
+                    
+                    f.write(f"5. SIGNAL CONCORDANCE REPORT\n")
+                    f.write(f"----------------------------\n")
+                    f.write(f"{final_state.get('concordance_report', 'N/A')}\n\n")
+                    
+                    f.write(f"6. CONFIDENCE ASSESSMENT\n")
+                    f.write(f"------------------------\n")
+                    f.write(f"SCORE: {final_state.get('confidence_score', 'N/A')}/100\n")
+                    f.write(f"{final_state.get('confidence_report', 'N/A')}\n\n")
+                    
+                    f.write(f"7. FINAL TRADING DECISION\n")
+                    f.write(f"-------------------------\n")
+                    f.write(f"{final_state.get('final_trade_decision', 'N/A')}\n")
+                
+                print(f"✅ Full report saved to: {report_filename}")
+                return {
+                    "success": True,
+                    "final_state": final_state,
+                    "asset_name": asset_name,
+                    "timeframe": display_timeframe,
+                    "data_length": len(df_slice),
+                }
+                
+            except Exception as ge:
+                error_msg = str(ge)
+                print(f"❌ AI Analysis Failed: {error_msg}")
+                # Update report to indicate failure
+                with open(report_filename, "a", encoding="utf-8") as f:
+                    f.write(f"AI ANALYSIS FAILED\n")
+                    f.write(f"==================\n")
+                    f.write(f"Error: {error_msg}\n")
+                    f.write(f"Note: Charts and Data were successfully processed, but the LLM call failed.\n")
+                
+                # Re-raise or return partial success info
+                raise ge
 
         except Exception as e:
             error_msg = str(e)
@@ -379,9 +462,13 @@ class WebTradingAnalyzer:
         final_state = results["final_state"]
 
         # Extract analysis results from state fields
+        regime_analysis = final_state.get("regime_report", "")
         technical_indicators = final_state.get("indicator_report", "")
         pattern_analysis = final_state.get("pattern_report", "")
         trend_analysis = final_state.get("trend_report", "")
+        concordance_analysis = final_state.get("concordance_report", "")
+        confidence_analysis = final_state.get("confidence_report", "")
+        confidence_score = final_state.get("confidence_score", 0.0)
         final_decision_raw = final_state.get("final_trade_decision", "")
 
         # Extract chart data if available
@@ -422,9 +509,13 @@ class WebTradingAnalyzer:
             "asset_name": results["asset_name"],
             "timeframe": results["timeframe"],
             "data_length": results["data_length"],
+            "regime_analysis": regime_analysis,
             "technical_indicators": technical_indicators,
             "pattern_analysis": pattern_analysis,
             "trend_analysis": trend_analysis,
+            "concordance_analysis": concordance_analysis,
+            "confidence_analysis": confidence_analysis,
+            "confidence_score": confidence_score,
             "pattern_chart": pattern_chart,
             "trend_chart": trend_chart,
             "pattern_image_filename": pattern_image_filename,
@@ -1025,13 +1116,13 @@ def get_image(image_type):
     """API endpoint to serve generated images."""
     try:
         if image_type == "pattern":
-            image_path = "kline_chart.png"
+            image_path = OUTPUT_DIR / "kline_chart.png"
         elif image_type == "trend":
-            image_path = "trend_graph.png"
+            image_path = OUTPUT_DIR / "trend_graph.png"
         elif image_type == "pattern_chart":
-            image_path = "pattern_chart.png"
+            image_path = OUTPUT_DIR / "pattern_chart.png"
         elif image_type == "trend_chart":
-            image_path = "trend_chart.png"
+            image_path = OUTPUT_DIR / "trend_chart.png"
         else:
             return jsonify({"error": "Invalid image type"})
 
