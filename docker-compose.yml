@@ -7,11 +7,11 @@ services:
     container_name: omniagent_app
     restart: unless-stopped
     ports:
-      - "5000:5000"
+      - "8080:8080"
       - "11434:11434"
     environment:
       - HOST=0.0.0.0
-      - PORT=5000
+      - PORT=8080
     volumes:
       - omniagent_outputs:/app/outputs
       - omniagent_reports:/app/outputs/reports

@@ -24,5 +24,5 @@ ollama pull llava
 echo "✅ Vision model 'llava' ready!"
 
 # Launch Flask Web Interface
-echo "🌐 Launching OmniAgent Web Dashboard on port ${PORT:-5000}..."
+echo "🌐 Launching OmniAgent Web Dashboard on port ${PORT:-8080}..."
 exec python web_interface.py

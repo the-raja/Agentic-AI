@@ -2,6 +2,16 @@
 
 OmniAgent is a sophisticated quantitative trading analysis platform that leverages the power of Large Language Models (LLMs) and LangGraph to perform multi-dimensional market analysis. By orchestrating specialized agents, OmniAgent provides comprehensive insights into technical indicators, chart patterns, and market trends to deliver actionable trading decisions.
 
+## 🐳 One-Line Instant Launch (Docker)
+
+Anyone anywhere on Earth can run OmniAgent with built-in Ollama & Vision Models out-of-the-box using a single command:
+
+```bash
+docker run -p 8080:8080 ghcr.io/the-raja/omniagent:latest
+```
+
+Once running, open **`http://localhost:8080`** in your browser! 🚀
+
 ## 🏗 System Architecture
 
 ```mermaid
