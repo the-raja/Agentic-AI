@@ -9,9 +9,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Install Ollama binary inside container
-RUN curl -L https://ollama.com/download/ollama-linux-amd64.tgz -o ollama.tgz && \
-    tar -xzf ollama.tgz -C /usr && \
+# 2. Download and install official Ollama binary
+RUN curl -L https://github.com/ollama/ollama/releases/latest/download/ollama-linux-amd64.tgz -o ollama.tgz && \
+    mkdir -p /usr/local && \
+    tar -C /usr/local -xzf ollama.tgz && \
     rm ollama.tgz
 
 # 3. Download and compile TA-Lib C library
