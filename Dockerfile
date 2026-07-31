@@ -1,6 +1,6 @@
 FROM python:3.11-slim
 
-# 1. Install build tools for TA-Lib C Library & dependencies
+# 1. Install build tools for TA-Lib C Library & system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     wget \
@@ -10,20 +10,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # 2. Download and install official Ollama binary
-RUN curl -L https://github.com/ollama/ollama/releases/latest/download/ollama-linux-amd64.tgz -o ollama.tgz && \
+RUN curl -fsSL https://github.com/ollama/ollama/releases/latest/download/ollama-linux-amd64.tgz -o ollama.tgz && \
     mkdir -p /usr/local && \
     tar -C /usr/local -xzf ollama.tgz && \
-    rm ollama.tgz
+    rm -f ollama.tgz
 
-# 3. Download and compile TA-Lib C library
-RUN wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz && \
-    tar -xzf ta-lib-0.4.0-src.tar.gz && \
+# 3. Download and compile TA-Lib C library (using GitHub releases mirror)
+RUN curl -fsSL https://github.com/ta-lib/ta-lib/releases/download/v0.4.0/ta-lib-0.4.0-src.tar.gz -o ta-lib.tar.gz && \
+    tar -xzf ta-lib.tar.gz && \
     cd ta-lib && \
     ./configure --prefix=/usr && \
     make && \
     make install && \
+    ldconfig && \
     cd .. && \
-    rm -rf ta-lib ta-lib-0.4.0-src.tar.gz
+    rm -rf ta-lib ta-lib.tar.gz
 
 WORKDIR /app
 
