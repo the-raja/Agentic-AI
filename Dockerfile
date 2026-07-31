@@ -32,11 +32,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 RUN chmod +x entrypoint.sh
 
-# Expose ports for Web UI (5000) and Ollama Engine (11434)
-EXPOSE 5000 11434
+# Expose ports for Web UI (8080) and Ollama Engine (11434)
+EXPOSE 8080 11434
 
 ENV HOST=0.0.0.0
-ENV PORT=5000
+ENV PORT=8080
 ENV PYTHONUNBUFFERED=1
 
 ENTRYPOINT ["./entrypoint.sh"]
