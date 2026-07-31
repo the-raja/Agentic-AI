@@ -4,7 +4,7 @@ OmniAgent is a sophisticated quantitative trading analysis platform that leverag
 
 ## 🏗 System Architecture
 
-![OmniAgent System Architecture](assets/architecture_diagram.png)
+![OmniAgent System Architecture](assets/Architecture_Diagram.png)
 
 ```mermaid
 graph TD
