@@ -3,27 +3,27 @@
 
 <head>
     <meta charset="utf-8">
-    <title>QuantAgent - Multi-Agent Trading System</title>
+    <title>OmniAgent - Multi-Agent Trading System</title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-                 :root {
-             --etrade-purple: #241056;
-             --etrade-purple-light: #5627D8;
-             --etrade-purple-dark: #1A0B3A;
-             --etrade-purple-bg: #F8F5FF;
-            --white: #ffffff;
-            --gray-50: #F9FAFB;
-            --gray-100: #F3F4F6;
-            --gray-200: #E5E7EB;
-            --gray-300: #D1D5DB;
-            --gray-400: #9CA3AF;
-            --gray-500: #6B7280;
-            --gray-600: #4B5563;
-            --gray-700: #374151;
-            --gray-800: #1F2937;
-            --gray-900: #111827;
-        }
+        :root {
+            --etrade-purple: #663d08;
+            --etrade-purple-light: #38065a;
+            --etrade-purple-dark: #1A0B3A;
+            --etrade-purple-bg: #F8F5FF;
+            --white: #FCFAF7;
+            --gray-50: #F5F1EC;
+            --gray-100: #E9E1D8;
+            --gray-200: #D8CCBF;
+            --gray-300: #C4B29F;
+            --gray-400: #A68F78;
+            --gray-500: #846C56;
+            --gray-600: #654F3E;
+            --gray-700: #49382D;
+            --gray-800: #2F241D;
+            --gray-900: #18120D;
+}
 
         * {
             box-sizing: border-box;
@@ -890,8 +890,8 @@
                                         
                                     </div>
                                     <div style="display: flex; align-items: center; justify-content: center; gap: 0rem; margin-bottom: 0.5rem;">
-                                        <img src="assets/darklogo.png" alt="QuantAgent Logo" style="width: 7rem; height: 7rem; object-fit: contain; background: transparent; box-shadow: none; border: none; border-radius: 0; transform: translateY(0.5rem);">
-                                        <span style="font-size: 4.0rem; font-weight: 700; color: white; line-height: 1.0;">QuantAgent:</span>
+                                        <img src="assets/darklogo.png" alt="OmniAgent Logo" style="width: 7rem; height: 7rem; object-fit: contain; background: transparent; box-shadow: none; border: none; border-radius: 0; transform: translateY(0.5rem);">
+                                        <span style="font-size: 4.0rem; font-weight: 700; color: white; line-height: 1.0;">OmniAgent:</span>
                                     </div>
                                     <div class="text-center">
                                         <span class="title-highlight">Multi-Agent Trading System</span>
@@ -1108,6 +1108,7 @@
                                         <option value="openai" selected>OpenAI</option>
                                         <option value="anthropic">Claude (Anthropic)</option>
                                         <option value="qwen">Qwen</option>
+                                        <option value="ollama">Ollama (Local)</option>
                                     </select>
                                 </div>
                                 
@@ -1554,6 +1555,13 @@
         
         function checkApiKeyStatus() {
             const provider = document.getElementById('llmProviderSelect')?.value || 'openai';
+            
+            // Ollama is a local server and doesn't require an API key
+            if (provider === 'ollama') {
+                showApiKeyStatus(`Ollama Local Server active (No API key required)`);
+                return;
+            }
+
             fetch(`/api/get-api-key-status?provider=${provider}`)
                 .then(response => {
                     if (!response.ok) {
@@ -1565,13 +1573,13 @@
                     const providerNames = {
                         'openai': 'OpenAI',
                         'anthropic': 'Anthropic',
-                        'qwen': 'Qwen'
+                        'qwen': 'Qwen',
+                        'ollama': 'Ollama'
                     };
                     const providerName = providerNames[provider] || provider;
                     
                     if (data.error) {
                         console.error('API key status error:', data.error);
-                        // Don't show error if it's just that no key is set
                         if (data.has_key === false) {
                             showApiKeyError(`No ${providerName} API key found. Please enter your ${providerName} API key.`);
                         } else {
@@ -1585,7 +1593,6 @@
                 })
                 .catch(error => {
                     console.error('Error checking API key status:', error);
-                    // Silently fail - don't show error to user
                 });
         }
         

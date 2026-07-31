@@ -1,19 +1,40 @@
-flask //Used to create a web application for the trading agent.
-yfinance //Used to fetch financial data from Yahoo Finance.
-pandas //Used for data manipulation and analysis in Python.
-numpy //Used for data manipulation and analysis in Python.
-matplotlib //Used for data visualization and plotting in Python.
-mplfinance //Used for financial data visualization and plotting candlestick charts.
-scipy //Used for scientific computing and technical analysis in trading.
-TA-Lib //A toolkit that calculates trading indicators from market price data.
-langchain //llm
-langchain-openai //Used to access OpenAI's language models through the LangChain library.
-langchain-anthropic //Used to access Anthropic's language models through the LangChain library.
-langchain-qwq //Used to access QwQ's language models through the LangChain library.
-langchain-core //Core components of the LangChain library for building language model applications.
-langgraph //Used to create and manage graph-based data structures for language model applications.
-openai //Used to access OpenAI's language models and APIs for natural language processing tasks.
-anthropic //Used to access Claude AI models from Anthropic. 
-ipython //Used to run interactive Python environments.
-Pillow //imgprocessing
-requests   //Used to send HTTP requests to APIs or websites.
+# Web Framework
+flask
+
+# Market Data
+yfinance
+
+# Data Processing
+pandas
+numpy
+
+# Visualization
+matplotlib
+mplfinance
+
+# Scientific Computing
+scipy
+
+# Technical Analysis
+TA-Lib
+
+# LangChain
+langchain
+langchain-openai
+langchain-anthropic
+langchain-ollama
+langchain-core
+langgraph
+
+# LLM Providers
+openai
+anthropic
+
+# Interactive Shell
+ipython
+
+# Image Processing
+Pillow
+
+# HTTP Requests
+requests

@@ -34,24 +34,13 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
         tools = [toolkit.generate_kline_image]
         time_frame = state["time_frame"]
         pattern_text = """
-        Please refer to the following classic candlestick patterns:
-
-        1. Inverse Head and Shoulders: Three lows with the middle one being the lowest, symmetrical structure, typically indicates an upcoming upward trend.
-        2. Double Bottom: Two similar low points with a rebound in between, forming a 'W' shape.
-        3. Rounded Bottom: Gradual price decline followed by a gradual rise, forming a 'U' shape.
-        4. Hidden Base: Horizontal consolidation followed by a sudden upward breakout.
-        5. Falling Wedge: Price narrows downward, usually breaks out upward.
-        6. Rising Wedge: Price rises slowly but converges, often breaks down.
-        7. Ascending Triangle: Rising support line with a flat resistance on top, breakout often occurs upward.
-        8. Descending Triangle: Falling resistance line with flat support at the bottom, typically breaks down.
-        9. Bullish Flag: After a sharp rise, price consolidates downward briefly before continuing upward.
-        10. Bearish Flag: After a sharp drop, price consolidates upward briefly before continuing downward.
-        11. Rectangle: Price fluctuates between horizontal support and resistance.
-        12. Island Reversal: Two price gaps in opposite directions forming an isolated price island.
-        13. V-shaped Reversal: Sharp decline followed by sharp recovery, or vice versa.
-        14. Rounded Top / Rounded Bottom: Gradual peaking or bottoming, forming an arc-shaped pattern.
-        15. Expanding Triangle: Highs and lows increasingly wider, indicating volatile swings.
-        16. Symmetrical Triangle: Highs and lows converge toward the apex, usually followed by a breakout.
+        Please refer to the following common candlestick patterns:
+        1. Bull Flag: Sharp rise followed by narrow consolidation.
+        2. Bear Flag: Sharp drop followed by narrow consolidation.
+        3. Double Bottom/Top: Two similar lows/highs.
+        4. Head and Shoulders: Three peaks/troughs with a higher/lower middle.
+        5. Triangles (Ascending/Descending/Symmetrical): Converging support/resistance.
+        6. Wedges (Falling/Rising): Converging lines with a directional slope.
         """
 
         # --- Check for precomputed image in state ---
@@ -89,18 +78,23 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
                         "system",
                         "You are a trading pattern recognition assistant tasked with identifying classical high-frequency trading patterns. "
                         "You have access to tool: generate_kline_image. "
-                        "Use it by providing appropriate arguments like `kline_data`\n\n"
+                        "Use it by providing appropriate arguments like `kline_data`\\n\\n"
                         "Once the chart is generated, compare it to classical pattern descriptions and determine if any known pattern is present.",
                     ),
                     MessagesPlaceholder(variable_name="messages"),
                 ]
             ).partial(kline_data=json.dumps(state["kline_data"], indent=2))
 
-            chain = prompt | tool_llm.bind_tools(tools)
+            # Only bind tools if provider is NOT ollama (or if we really need to)
+            # But here we already checked if pattern_image_b64 is missing.
+            # If it's missing AND it's ollama, we might have an issue, 
+            # but web_interface now ensures it's always there.
+            chain = tool_llm.bind_tools(tools)
 
             # --- Step 1: First LLM call to determine tool usage ---
-            ai_response = invoke_with_retry(chain.invoke, messages)
+            ai_response = invoke_with_retry(chain.invoke, {"messages": messages})
             messages.append(ai_response)
+
 
             # --- Step 2: Handle tool call (generate_kline_image) ---
             if hasattr(ai_response, "tool_calls"):
@@ -122,14 +116,44 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
 
         # --- Step 3: Vision analysis with image (precomputed or generated) ---
         if pattern_image_b64:
+            # Add numerical context to help the vision model stay grounded
+            precalc = state.get("precalculated_indicators", {})
+            
+            # --- Extract numerical data for prompt ---
+            rsi_latest = "N/A"
+            macd_latest = "N/A"
+            if precalc:
+                # Extract the last value from the precalculated lists
+                # Handle both dict-wrapped and direct list cases
+                rsi_data = precalc.get('rsi', {})
+                rsi_list = rsi_data.get('rsi', []) if isinstance(rsi_data, dict) else rsi_data
+                if rsi_list and len(rsi_list) > 0:
+                    rsi_latest = rsi_list[-1]
+                
+                macd_data = precalc.get('macd', {})
+                macd_list = macd_data.get('macd', []) if isinstance(macd_data, dict) else []
+                if macd_list and len(macd_list) > 0:
+                    macd_latest = macd_list[-1]
+
+            numerical_context = (
+                f"Numerical Context for Verification:\n"
+                f"- Latest RSI: {rsi_latest}\n"
+                f"- Latest MACD: {macd_latest}\n"
+                f"- Market Condition: {state.get('regime_report', 'N/A')[:300]}...\n"
+            )
+
             image_prompt = [
                 {
                     "type": "text",
                     "text": (
-                        f"This is a {time_frame} candlestick chart generated from recent OHLC market data.\n\n"
+                        f"This is a {time_frame} candlestick chart for {state.get('stock_name', 'the asset')}.\n\n"
+                        f"{numerical_context}\n"
                         f"{pattern_text}\n\n"
-                        "Determine whether the chart matches any of the patterns listed. "
-                        "Clearly name the matched pattern(s), and explain your reasoning based on structure, trend, and symmetry."
+                        "ANALYSIS TASK:\n"
+                        "1. Look at the visual structure in the image.\n"
+                        "2. Cross-reference it with the Numerical Context provided above.\n"
+                        "3. Determine if the chart matches any classic patterns (e.g., Bull Flag, Double Bottom, etc.).\n"
+                        "4. Provide a HIGHLY SPECIFIC description of what you see in this specific image. Avoid generic responses."
                     ),
                 },
                 {
@@ -175,7 +199,7 @@ def create_pattern_agent(tool_llm, graph_llm, toolkit):
                     raise
         else:
             # If no image was generated, fall back to reasoning with messages
-            final_response = invoke_with_retry(chain.invoke, messages)
+            final_response = invoke_with_retry(chain.invoke, {"messages": messages})
 
         return {
             "messages": messages + [final_response],

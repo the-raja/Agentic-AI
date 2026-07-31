@@ -6,10 +6,18 @@ Initializes LLMs, toolkits, and agent nodes for indicator, pattern, and trend an
 import os
 from typing import Dict
 
-from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseChatModel
 from langchain_openai import ChatOpenAI
-from langchain_qwq import ChatQwen
+
+try:
+    from langchain_anthropic import ChatAnthropic
+except ImportError:
+    ChatAnthropic = None
+
+try:
+    from langchain_ollama import ChatOllama
+except ImportError:
+    ChatOllama = None
 from langgraph.prebuilt import ToolNode
 
 from default_config import DEFAULT_CONFIG
@@ -59,14 +67,17 @@ class TradingGraph:
         Get API key with proper validation and error handling.
         
         Args:
-            provider: The provider name ("openai", "anthropic", or "qwen")
+            provider: The provider name ("openai", "anthropic", "qwen", or "ollama")
         
         Returns:
-            str: The API key for the specified provider
+            str: The API key for the specified provider (or empty string for Ollama)
             
         Raises:
             ValueError: If API key is missing or invalid
         """
+        if provider == "ollama":
+            return "" # Ollama doesn't require an API key by default
+            
         if provider == "openai":
             # First check if API key is provided in config
             api_key = self.config.get("api_key")
@@ -159,23 +170,30 @@ class TradingGraph:
                 api_key=api_key,
             )
         elif provider == "anthropic":
-            # ChatAnthropic handles SystemMessage extraction automatically
-            # It extracts SystemMessage from the message list and passes it as 'system' parameter
-            # The messages array should contain at least one non-SystemMessage
+            if ChatAnthropic is None:
+                raise ImportError("langchain-anthropic is not installed. Run `pip install langchain-anthropic`.")
             return ChatAnthropic(
                 model=model,
                 temperature=temperature,
                 api_key=api_key,
             )
         elif provider == "qwen":
-            return ChatQwen(
+            # Support Qwen via OpenAI compatible API endpoint (DashScope)
+            return ChatOpenAI(
                 model=model,
                 temperature=temperature,
                 api_key=api_key,
-                max_retries=4,
+                base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+            )
+        elif provider == "ollama":
+            if ChatOllama is None:
+                raise ImportError("langchain-ollama is not installed. Run `pip install langchain-ollama`.")
+            return ChatOllama(
+                model=model,
+                temperature=temperature,
             )
         else:
-            raise ValueError(f"Unsupported provider: {provider}. Must be 'openai', 'anthropic', or 'qwen'")
+            raise ValueError(f"Unsupported provider: {provider}. Must be 'openai', 'anthropic', 'qwen', or 'ollama'")
 
     # def _set_tool_nodes(self) -> Dict[str, ToolNode]:
     #     """

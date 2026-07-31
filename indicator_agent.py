@@ -25,36 +25,100 @@ def create_indicator_agent(llm, toolkit):
             toolkit.compute_willr,
         ]
         time_frame = state["time_frame"]
+        
+        # --- Check for pre-calculated indicators ---
+        precalc = state.get("precalculated_indicators", {})
+        
         # --- System prompt for LLM ---
+        system_msg = (
+            "You are a high-frequency trading (HFT) analyst assistant operating under time-sensitive conditions. "
+            "You must analyze technical indicators to support fast-paced trading execution.\n\n"
+        )
+        
+        rsi_val = macd_val = roc_val = stoch_val = willr_val = "N/A"
+        if precalc:
+            # If we have precalculated data, just provide it in the prompt
+            system_msg += "Here are the pre-calculated technical indicators for the recent period (latest values first):\n"
+            
+            # Extract latest values for easier reading
+            def get_latest(data, key):
+                if not data: return "N/A"
+                val = data.get(key, "N/A")
+                if isinstance(val, list) and len(val) > 0:
+                    return val[-1]
+                if isinstance(val, dict):
+                    # Handle nested dicts like {'rsi': [...]}
+                    nested_val = val.get(key, "N/A")
+                    if isinstance(nested_val, list) and len(nested_val) > 0:
+                        return nested_val[-1]
+                return val
+
+            rsi_latest = get_latest(precalc.get('rsi'), 'rsi')
+            macd_latest = get_latest(precalc.get('macd'), 'macd')
+            roc_latest = get_latest(precalc.get('roc'), 'roc')
+            stoch_latest = get_latest(precalc.get('stoch'), 'stoch_k')
+            willr_latest = get_latest(precalc.get('willr'), 'willr')
+
+            system_msg += f"- RSI (14): {rsi_latest}\n"
+            system_msg += f"- MACD (Latest): {macd_latest}\n"
+            system_msg += f"- ROC: {roc_latest}\n"
+            system_msg += f"- Stochastic (%K): {stoch_latest}\n"
+            system_msg += f"- Williams %R: {willr_latest}\n\n"
+            
+            system_msg += "Full data series provided for context:\n"
+            system_msg += "- RSI Series: {rsi_val}\n"
+            system_msg += "- MACD Data: {macd_val}\n\n"
+            
+            rsi_val = json.dumps(precalc.get('rsi', 'N/A'))
+            macd_val = json.dumps(precalc.get('macd', 'N/A'))
+            roc_val = json.dumps(precalc.get('roc', 'N/A'))
+            stoch_val = json.dumps(precalc.get('stoch', 'N/A'))
+            willr_val = json.dumps(precalc.get('willr', 'N/A'))
+        else:
+            system_msg += (
+                "You have access to tools: compute_rsi, compute_macd, compute_roc, compute_stoch, and compute_willr. "
+                "Use them by providing appropriate arguments like `kline_data` and the respective periods.\n\n"
+            )
+
+        system_msg += (
+            f"⚠️ The OHLC data provided is from a {time_frame} intervals, reflecting recent market behavior. "
+            "You must interpret this data quickly and accurately.\n\n"
+            "Here is the OHLC data:\n{kline_data}.\n\n"
+            "Analyze the indicators and provide a concise report.\n"
+        )
+
         prompt = ChatPromptTemplate.from_messages(
             [
-                (
-                    "system",
-                    "You are a high-frequency trading (HFT) analyst assistant operating under time-sensitive conditions. "
-                    "You must analyze technical indicators to support fast-paced trading execution.\n\n"
-                    "You have access to tools: compute_rsi, compute_macd, compute_roc, compute_stoch, and compute_willr. "
-                    "Use them by providing appropriate arguments like `kline_data` and the respective periods.\n\n"
-                    f"⚠️ The OHLC data provided is from a {time_frame} intervals, reflecting recent market behavior. "
-                    "You must interpret this data quickly and accurately.\n\n"
-                    "Here is the OHLC data:\n{kline_data}.\n\n"
-                    "Call necessary tools, and analyze the results.\n",
-                ),
+                ("system", system_msg),
                 MessagesPlaceholder(variable_name="messages"),
             ]
-        ).partial(kline_data=json.dumps(state["kline_data"], indent=2))
+        ).partial(
+            kline_data=json.dumps(state["kline_data"], indent=2),
+            rsi_val=rsi_val,
+            macd_val=macd_val,
+            roc_val=roc_val,
+            stoch_val=stoch_val,
+            willr_val=willr_val
+        )
 
-        chain = prompt | llm.bind_tools(tools)
-        # messages = state["messages"]
+        # Use tool binding only if NO precalculated data is available
+        if not precalc:
+            chain = prompt | llm.bind_tools(tools)
+        else:
+            chain = prompt | llm
+
         messages = state.get("messages", [])
         if not messages:
             messages = [HumanMessage(content="Begin indicator analysis.")]
 
 
-        # --- Step 1: Ask for tool calls ---
-        ai_response = chain.invoke(messages)
+        # --- Step 1: Ask for tool calls / initial response ---
+        ai_response = chain.invoke({"messages": messages})
         messages.append(ai_response)
         
-        # --- Step 2: Collect tool results ---
+        final_response = ai_response
+
+        # --- Step 2 & 3: Handle tool calls if present ---
         if hasattr(ai_response, "tool_calls") and ai_response.tool_calls:
             for call in ai_response.tool_calls:
                 tool_name = call["name"]
@@ -71,42 +135,40 @@ def create_indicator_agent(llm, toolkit):
                     )
                 )
 
-        # --- Step 3: Re-run the chain with tool results ---
-        # Keep invoking until we get a text response (not another tool call)
-        # This is important for Claude which may make multiple tool calls
-        max_iterations = 5  # Prevent infinite loops
-        iteration = 0
-        final_response = None
-        
-        while iteration < max_iterations:
-            iteration += 1
-            final_response = chain.invoke(messages)
-            messages.append(final_response)
+            # Re-run the chain with tool results until we get a text response
+            max_iterations = 5  # Prevent infinite loops
+            iteration = 0
             
-            # If there are no tool calls, we have the final answer
-            if not hasattr(final_response, "tool_calls") or not final_response.tool_calls:
-                break
-            
-            # If there are more tool calls, execute them
-            for call in final_response.tool_calls:
-                tool_name = call["name"]
-                tool_args = call["args"]
-                tool_args["kline_data"] = copy.deepcopy(state["kline_data"])
-                tool_fn = next(t for t in tools if t.name == tool_name)
-                tool_result = tool_fn.invoke(tool_args)
-                messages.append(
-                    ToolMessage(
-                        tool_call_id=call["id"], content=json.dumps(tool_result)
+            while iteration < max_iterations:
+                iteration += 1
+                final_response = chain.invoke({"messages": messages})
+                messages.append(final_response)
+                
+                # If there are no tool calls, we have the final answer
+                if not hasattr(final_response, "tool_calls") or not final_response.tool_calls:
+                    break
+                
+                # If there are more tool calls, execute them
+                for call in final_response.tool_calls:
+                    tool_name = call["name"]
+                    tool_args = call["args"]
+                    tool_args["kline_data"] = copy.deepcopy(state["kline_data"])
+                    tool_fn = next(t for t in tools if t.name == tool_name)
+                    tool_result = tool_fn.invoke(tool_args)
+                    messages.append(
+                        ToolMessage(
+                            tool_call_id=call["id"], content=json.dumps(tool_result)
+                        )
                     )
-                )
 
         # Extract content - handle both string and empty content cases
         if final_response:
             report_content = final_response.content
-            # If content is empty or None, try to get text from recent messages
+            # If content is empty or None, try to get text from recent messages added by THIS agent
             if not report_content or (isinstance(report_content, str) and not report_content.strip()):
-                # Check if there's any text content in the messages (skip tool calls)
-                for msg in reversed(messages):
+                # Only look at messages added since THIS agent started (after 'messages' from state)
+                state_messages_count = len(state.get("messages", []))
+                for msg in reversed(messages[state_messages_count:]):
                     if (hasattr(msg, 'content') and msg.content and 
                         isinstance(msg.content, str) and msg.content.strip() and 
                         not hasattr(msg, 'tool_calls')):

@@ -24,6 +24,9 @@ class IndicatorAgentState(TypedDict):
     indicator_report: Annotated[
         str, "Final indicator agent summary report to be used by downstream agents"
     ]
+    precalculated_indicators: Annotated[
+        dict, "Pre-calculated technical indicators for agents"
+    ]
 
     # Regime Agent
     regime_report: Annotated[
@@ -72,6 +75,9 @@ class IndicatorAgentState(TypedDict):
     ]
     confidence_score: Annotated[
         float, "Numerical confidence score (0-100) for the trade setup"
+    ]
+    confidence_details: Annotated[
+        dict, "Structured risk assessment and factor scores"
     ]
 
     # Final analysis and messaging context
