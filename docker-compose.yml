@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  omniagent:
+    build: .
+    image: ghcr.io/the-raja/omniagent:latest
+    container_name: omniagent_app
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+      - "11434:11434"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=5000
+    volumes:
+      - omniagent_outputs:/app/outputs
+      - omniagent_reports:/app/outputs/reports
+      - ollama_storage:/root/.ollama
+
+volumes:
+  omniagent_outputs:
+  omniagent_reports:
+  ollama_storage:
