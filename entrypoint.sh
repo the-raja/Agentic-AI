@@ -1,28 +1,24 @@
 #!/bin/bash
 set -e
 
-echo "=========================================="
-echo "🚀 Starting OmniAgent Docker Container"
-echo "=========================================="
+echo "=== Starting OmniAgent All-in-One Container ==="
 
-# Start Ollama service in background
-echo "📦 Starting Ollama engine in background..."
-ollama serve > /tmp/ollama.log 2>&1 &
+export OLLAMA_HOST="127.0.0.1:11434"
 
-# Wait for Ollama service to become responsive
-echo "⏳ Waiting for Ollama engine to initialize..."
-until curl -s http://localhost:11434/api/tags > /dev/null 2>&1; do
-    sleep 2
+echo "[1/3] Starting Ollama background daemon..."
+ollama serve &
+
+echo "[2/3] Waiting for Ollama API..."
+until curl -s http://127.0.0.1:11434/api/tags > /dev/null; do
+    sleep 1
 done
 
-echo "✅ Ollama engine is online!"
+echo "Ollama API is online!"
 
-# Verify or pull default vision model (llava)
-echo "🧠 Checking Ollama vision model (llava)..."
-ollama pull llava
+if ! curl -s http://127.0.0.1:11434/api/tags | grep -q "llava"; then
+    echo "Pulling vision model (llava)..."
+    ollama pull llava
+fi
 
-echo "✅ Vision model 'llava' ready!"
-
-# Launch Flask Web Interface
-echo "🌐 Launching OmniAgent Web Dashboard on port ${PORT:-8080}..."
+echo "[3/3] AI Models ready! Launching OmniAgent Server on http://localhost:8080..."
 exec python web_interface.py
