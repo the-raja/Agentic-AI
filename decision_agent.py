@@ -66,18 +66,19 @@ def create_final_trade_decider(llm):
             5. ⚖️ If the market is in consolidation or reports are mixed:
             - Default to the **dominant trendline slope** (e.g., SHORT in descending channel).
             - Do not guess direction — choose the **more defensible** side.
-            6. Suggest a reasonable **risk-reward ratio** between **1.2 and 1.8**, based on current volatility and trend strength.
+            6. Suggest a **dynamic risk-reward ratio** (e.g., 2.1, 3.4, 1.3). Calculate this based on the distance between the current price and the nearest Support (Stop Loss) vs. Resistance (Take Profit) levels. A higher ratio (up to 5.0) should be suggested for high-conviction trend breakouts.
 
             ---
             ### 🧠 Output Format in json(for system parsing):
 
-            ```
+            ```json
             {{
             "forecast_horizon": "Predicting next 3 candlestick (15 minutes, 1 hour, etc.)",
             "decision": "<LONG or SHORT>",
             "justification": "<Concise, confirmed reasoning based on reports>",
-            "risk_reward_ratio": "<float between 1.2 and 1.8>",
+            "risk_reward_ratio": "<calculated float, typically 1.2 to 5.0>",
             }}
+            ```
 
             --------
             **Technical Indicator Report**  

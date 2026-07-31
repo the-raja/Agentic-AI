@@ -1,6 +1,6 @@
-# QuantAgent: Multi-Agent Quantitative Trading System
+# OmniAgent: Multi-Agent Quantitative Trading System
 
-QuantAgent is a sophisticated quantitative trading analysis platform that leverages the power of Large Language Models (LLMs) and LangGraph to perform multi-dimensional market analysis. By orchestrating specialized agents, QuantAgent provides comprehensive insights into technical indicators, chart patterns, and market trends to deliver actionable trading decisions.
+OmniAgent is a sophisticated quantitative trading analysis platform that leverages the power of Large Language Models (LLMs) and LangGraph to perform multi-dimensional market analysis. By orchestrating specialized agents, OmniAgent provides comprehensive insights into technical indicators, chart patterns, and market trends to deliver actionable trading decisions.
 
 ## 🚀 Features
 

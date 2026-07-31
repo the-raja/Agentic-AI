@@ -65,7 +65,6 @@ def generate_kline_image(kline_data) -> dict:
         bbox_inches="tight",
         pad_inches=0.1,
     )
-    plt.close(fig)
     # ---------- Encode to base64 -----------------
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=600, bbox_inches="tight", pad_inches=0.1)
@@ -150,7 +149,6 @@ def generate_trend_image(kline_data) -> dict:
     fig.savefig(
         OUTPUT_DIR / "trend_graph.png", format="png", dpi=600, bbox_inches="tight", pad_inches=0.1
     )
-    plt.close(fig)
 
     # Add legend manually
     axlist[0].legend(loc="upper left")

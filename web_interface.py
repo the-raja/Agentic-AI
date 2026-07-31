@@ -314,6 +314,21 @@ class WebTradingAnalyzer:
             p_image = static_util.generate_kline_image(df_slice_dict)
             t_image = static_util.generate_trend_image(df_slice_dict)
 
+            # --- Pre-calculate indicators for Ollama support ---
+            from graph_util import TechnicalTools
+            toolkit = TechnicalTools()
+            
+            # Compute all indicators up front
+            indicators = {
+                "rsi": toolkit.compute_rsi.invoke({"kline_data": df_slice_dict}),
+                "macd": toolkit.compute_macd.invoke({"kline_data": df_slice_dict}),
+                "roc": toolkit.compute_roc.invoke({"kline_data": df_slice_dict}),
+                "stoch": toolkit.compute_stoch.invoke({"kline_data": df_slice_dict}),
+                "willr": toolkit.compute_willr.invoke({"kline_data": df_slice_dict}),
+                "adx": toolkit.compute_adx.invoke({"kline_data": df_slice_dict}),
+                "atr": toolkit.compute_atr.invoke({"kline_data": df_slice_dict}),
+            }
+
             # --- Prepare and Save Initial/Partial Report ---
             reports_dir = OUTPUT_DIR / "reports"
             reports_dir.mkdir(exist_ok=True)
@@ -321,22 +336,22 @@ class WebTradingAnalyzer:
             report_filename = reports_dir / f"report_{asset_name}_{timeframe}_{timestamp}.txt"
             
             with open(report_filename, "w", encoding="utf-8") as f:
-                f.write(f"QUANTAGENT ANALYSIS REPORT (INITIAL/PARTIAL)\n")
+                f.write(f"OMNIAGENT ANALYSIS REPORT (INITIAL/PARTIAL)\n")
                 f.write(f"============================================\n")
                 f.write(f"Asset: {asset_name}\n")
                 f.write(f"Timeframe: {display_timeframe}\n")
                 f.write(f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
                 f.write(f"Status: Data Fetched & Charts Generated. Attempting AI Analysis...\n\n")
-                f.write(f"AGENT PIPELINE:\n")
+                f.write(f"AGENT PIPELINE STATUS (INITIAL):\n")
                 f.write(f"- [OK] Data Loader\n")
                 f.write(f"- [OK] Chart Generators (K-Line & Trend)\n")
-                f.write(f"- [..] Regime Agent\n")
-                f.write(f"- [..] Indicator Agent\n")
-                f.write(f"- [..] Pattern Agent\n")
-                f.write(f"- [..] Trend Agent\n")
-                f.write(f"- [..] Concordance Agent\n")
-                f.write(f"- [..] Confidence Agent\n")
-                f.write(f"- [..] Decision Maker\n\n")
+                f.write(f"- [PENDING] Regime Agent\n")
+                f.write(f"- [PENDING] Indicator Agent\n")
+                f.write(f"- [PENDING] Pattern Agent\n")
+                f.write(f"- [PENDING] Trend Agent\n")
+                f.write(f"- [PENDING] Concordance Agent\n")
+                f.write(f"- [PENDING] Confidence Agent\n")
+                f.write(f"- [PENDING] Decision Maker\n\n")
                 f.write(f"DATA SUMMARY:\n")
                 f.write(f"- Data Points: {len(df_slice)}\n")
                 f.write(f"- Start: {df_slice_dict['Datetime'][0]}\n")
@@ -352,14 +367,42 @@ class WebTradingAnalyzer:
                 "stock_name": asset_name,
                 "pattern_image": p_image["pattern_image"],
                 "trend_image": t_image["trend_image"],
+                "precalculated_indicators": indicators, # Pass precalculated indicators to the graph
+                "confidence_details": {},
             }
 
             # Run the trading graph
             try:
                 final_state = self.trading_graph.graph.invoke(initial_state)
                 
-                # Update the report with full analysis
+                # Helper function to dynamically verify agent status
+                def check_status(key):
+                    val = final_state.get(key)
+                    if val and str(val).strip() and str(val).strip() not in ["N/A", "that", ""]:
+                        return "OK"
+                    return "FAILED"
+
+                regime_st = check_status("regime_report")
+                indicator_st = check_status("indicator_report")
+                pattern_st = check_status("pattern_report")
+                trend_st = check_status("trend_report")
+                concordance_st = check_status("concordance_report")
+                confidence_st = check_status("confidence_report")
+                decision_st = check_status("final_trade_decision")
+
+                # Update the report with full analysis & dynamic pipeline status
                 with open(report_filename, "a", encoding="utf-8") as f:
+                    f.write(f"FINAL PIPELINE EXECUTION STATUS:\n")
+                    f.write(f"- [OK] Data Loader\n")
+                    f.write(f"- [OK] Chart Generators (K-Line & Trend)\n")
+                    f.write(f"- [{regime_st}] Regime Agent\n")
+                    f.write(f"- [{indicator_st}] Indicator Agent\n")
+                    f.write(f"- [{pattern_st}] Pattern Agent\n")
+                    f.write(f"- [{trend_st}] Trend Agent\n")
+                    f.write(f"- [{concordance_st}] Concordance Agent\n")
+                    f.write(f"- [{confidence_st}] Confidence Agent\n")
+                    f.write(f"- [{decision_st}] Decision Maker\n\n")
+
                     f.write(f"AI ANALYSIS COMPLETED SUCCESSFULLY\n")
                     f.write(f"=================================\n\n")
                     f.write(f"1. MARKET REGIME ANALYSIS\n")
@@ -391,7 +434,7 @@ class WebTradingAnalyzer:
                     f.write(f"-------------------------\n")
                     f.write(f"{final_state.get('final_trade_decision', 'N/A')}\n")
                 
-                print(f"✅ Full report saved to: {report_filename}")
+                print(f" Full report saved to: {report_filename}")
                 return {
                     "success": True,
                     "final_state": final_state,
@@ -402,7 +445,7 @@ class WebTradingAnalyzer:
                 
             except Exception as ge:
                 error_msg = str(ge)
-                print(f"❌ AI Analysis Failed: {error_msg}")
+                print(f" AI Analysis Failed: {error_msg}")
                 # Update report to indicate failure
                 with open(report_filename, "a", encoding="utf-8") as f:
                     f.write(f"AI ANALYSIS FAILED\n")
@@ -434,22 +477,22 @@ class WebTradingAnalyzer:
             ):
                 return {
                     "success": False,
-                    "error": f"❌ Invalid API Key: The {provider_name} API key you provided is invalid or has expired. Please check your API key in the Settings section and try again.",
+                    "error": f" Invalid API Key: The {provider_name} API key you provided is invalid or has expired. Please check your API key in the Settings section and try again.",
                 }
             elif "rate limit" in error_msg.lower() or "429" in error_msg:
                 return {
                     "success": False,
-                    "error": f"⚠️ Rate Limit Exceeded: You've hit the {provider_name} API rate limit. Please wait a moment and try again.",
+                    "error": f" Rate Limit Exceeded: You've hit the {provider_name} API rate limit. Please wait a moment and try again.",
                 }
             elif "quota" in error_msg.lower() or "billing" in error_msg.lower():
                 return {
                     "success": False,
-                    "error": f"💳 Billing Issue: Your {provider_name} account has insufficient credits or billing issues. Please check your {provider_name} account.",
+                    "error": f" Billing Issue: Your {provider_name} account has insufficient credits or billing issues. Please check your {provider_name} account.",
                 }
             elif "network" in error_msg.lower() or "connection" in error_msg.lower():
                 return {
                     "success": False,
-                    "error": f"🌐 Network Error: Unable to connect to {provider_name} servers. Please check your internet connection and try again.",
+                    "error": f" Network Error: Unable to connect to {provider_name} servers. Please check your internet connection and try again.",
                 }
             else:
                 return {"success": False, "error": f"❌ Analysis Error: {error_msg}"}
@@ -469,6 +512,7 @@ class WebTradingAnalyzer:
         concordance_analysis = final_state.get("concordance_report", "")
         confidence_analysis = final_state.get("confidence_report", "")
         confidence_score = final_state.get("confidence_score", 0.0)
+        confidence_details = final_state.get("confidence_details", {})
         final_decision_raw = final_state.get("final_trade_decision", "")
 
         # Extract chart data if available
@@ -482,11 +526,25 @@ class WebTradingAnalyzer:
         if final_decision_raw:
             try:
                 # Try to extract JSON from the decision
-                start = final_decision_raw.find("{")
-                end = final_decision_raw.rfind("}") + 1
-                if start != -1 and end != 0:
-                    json_str = final_decision_raw[start:end]
-                    decision_data = json.loads(json_str)
+                import re
+                
+                # 1. Look for JSON block within code fences
+                json_match = re.search(r'```json\s*(\{.*?\})\s*```', final_decision_raw, re.DOTALL)
+                if not json_match:
+                    # 2. Look for any block between { and } (Greedy to handle internal braces)
+                    json_match = re.search(r'(\{.*\})', final_decision_raw, re.DOTALL)
+                
+                if json_match:
+                    json_str = json_match.group(1)
+                    
+                    # 3. Clean up trailing commas before } or ]
+                    json_str = re.sub(r',\s*([\]}])', r'\1', json_str)
+                    
+                    # 4. Remove any non-standard comments if present
+                    json_str = re.sub(r'//.*', '', json_str)
+                    
+                    # Use strict=False to handle raw newlines and other control characters
+                    decision_data = json.loads(json_str, strict=False)
                     final_decision = {
                         "decision": decision_data.get("decision", "N/A"),
                         "risk_reward_ratio": decision_data.get(
@@ -499,10 +557,11 @@ class WebTradingAnalyzer:
                     }
                 else:
                     # If no JSON found, return the raw text
-                    final_decision = {"raw": final_decision_raw}
-            except json.JSONDecodeError:
+                    final_decision = {"raw": final_decision_raw, "justification": final_decision_raw}
+            except Exception as e:
+                print(f"Error parsing final decision JSON: {e}")
                 # If JSON parsing fails, return the raw text
-                final_decision = {"raw": final_decision_raw}
+                final_decision = {"raw": final_decision_raw, "justification": final_decision_raw}
 
         return {
             "success": True,
@@ -516,6 +575,7 @@ class WebTradingAnalyzer:
             "concordance_analysis": concordance_analysis,
             "confidence_analysis": confidence_analysis,
             "confidence_score": confidence_score,
+            "confidence_details": confidence_details,
             "pattern_chart": pattern_chart,
             "trend_chart": trend_chart,
             "pattern_image_filename": pattern_image_filename,
@@ -750,21 +810,35 @@ def output():
 
     # Default results if none provided
     default_results = {
-        "asset_name": "BTC",
+        "asset_name": "BTC (SAMPLE)",
         "timeframe": "1h",
         "data_length": 1247,
-        "technical_indicators": "RSI (14): 65.4 - Neutral to bullish momentum\nMACD: Bullish crossover with increasing histogram\nMoving Averages: Price above 50-day and 200-day MA\nBollinger Bands: Price in upper band, showing strength\nVolume: Above average volume supporting price action",
-        "pattern_analysis": "Bull Flag Pattern: Consolidation after strong upward move\nGolden Cross: 50-day MA crossing above 200-day MA\nHigher Highs & Higher Lows: Uptrend confirmation\nVolume Pattern: Increasing volume on price advances",
-        "trend_analysis": "Primary Trend: Bullish (Long-term)\nSecondary Trend: Bullish (Medium-term)\nShort-term Trend: Consolidating with bullish bias\nADX: 28.5 - Moderate trend strength\nPrice Action: Higher highs and higher lows maintained\nMomentum: Positive divergence on RSI",
+        "technical_indicators": "SAMPLE DATA (Analysis Failed or No Data Provided):\nRSI (14): 65.4 - Neutral momentum\nMACD: Bullish crossover\nMoving Averages: Price above 50-day MA",
+        "pattern_analysis": "SAMPLE DATA:\nPotential Bull Flag Pattern identified in demo mode.",
+        "trend_analysis": "SAMPLE DATA:\nPrimary Trend: Bullish\nADX: 28.5 - Moderate trend strength",
+        "confidence_analysis": "Score: 0/100 (Sample)",
+        "confidence_score": 0.0,
+        "confidence_details": {
+            "score": 0,
+            "risk_level": "N/A",
+            "factor_scores": {
+                "confluence": 0,
+                "regime_fit": 0,
+                "signal_clarity": 0,
+                "risk_profile": 0
+            },
+            "justification": "This is sample data because the real analysis was not performed or failed.",
+            "recommended_size": "N/A"
+        },
         "pattern_chart": "",
         "trend_chart": "",
         "pattern_image_filename": "",
         "trend_image_filename": "",
         "final_decision": {
-            "decision": "LONG",
-            "risk_reward_ratio": "1:2.5",
-            "forecast_horizon": "24-48 hours",
-            "justification": "Based on comprehensive analysis of technical indicators, pattern recognition, and trend analysis, the system recommends a LONG position on BTC. The analysis shows strong bullish momentum with key support levels holding, and multiple technical indicators confirming upward movement.",
+            "decision": "WAIT",
+            "risk_reward_ratio": "N/A",
+            "forecast_horizon": "N/A",
+            "justification": "Analysis could not be completed. Please check your data source and API keys.",
         },
     }
 
@@ -989,8 +1063,8 @@ def update_provider():
         data = request.get_json()
         provider = data.get("provider", "openai")
 
-        if provider not in ["openai", "anthropic", "qwen"]:
-            return jsonify({"error": "Provider must be 'openai', 'anthropic', or 'qwen'"})
+        if provider not in ["openai", "anthropic", "qwen", "ollama"]:
+            return jsonify({"error": "Provider must be 'openai', 'anthropic', 'qwen', or 'ollama'"})
 
         print(f"Updating provider to: {provider}")
 
@@ -1013,6 +1087,10 @@ def update_provider():
                 analyzer.config["agent_llm_model"] = "qwen3-max"
             if not analyzer.config["graph_llm_model"].startswith("qwen"):
                 analyzer.config["graph_llm_model"] = "qwen3-vl-plus"
+        elif provider == "ollama":
+            # Set default Ollama models (Vision capable)
+            analyzer.config["agent_llm_model"] = "llava"
+            analyzer.config["graph_llm_model"] = "llava"
             
         else:
             # Set default OpenAI models if not already set to OpenAI models
@@ -1093,6 +1171,9 @@ def get_api_key_status():
             # Fallback to config if not in environment
             if not api_key and hasattr(analyzer, 'config'):
                 api_key = analyzer.config.get("qwen_api_key", "")
+        elif provider == "ollama":
+            # Ollama runs locally and does not require an API key
+            return jsonify({"has_key": True, "masked_key": "Local Server (No Key Needed)"})
         else:
             api_key = ""
         

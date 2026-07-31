@@ -21,27 +21,35 @@ def create_concordance_agent(llm):
         stock_name = state.get("stock_name", "N/A")
 
         # --- System prompt for LLM ---
+        system_msg = (
+            "You are a Senior Trading Strategist specializing in Signal Confluence (Concordance). "
+            "Your task is to review reports from multiple specialized analysts and determine if their signals "
+            "are in alignment (Concordance) or in conflict.\n\n"
+            "Analysts provided the following reports:\n"
+            "1. MARKET REGIME: {regime_report}\n"
+            "2. TECHNICAL INDICATORS: {indicator_report}\n"
+            "3. PATTERN RECOGNITION: {pattern_report}\n"
+            "4. TREND ANALYSIS: {trend_report}\n\n"
+            "Your assessment must cover:\n"
+            "- Alignment: Are the signals (Regime, Indicators, Patterns, Trend) pointing in the same direction?\n"
+            "- Conflicts: Identify any contradictory signals (e.g., Bullish Pattern vs. Bearish Regime).\n"
+            "- Strength of Confluence: Rate the overall agreement (e.g., Weak, Moderate, Strong).\n"
+            "- Key Drivers: What are the primary factors driving the current consensus or lack thereof?\n\n"
+            "Target Asset: {stock_name} ({time_frame})\n"
+        )
+
         prompt = ChatPromptTemplate.from_messages(
             [
-                (
-                    "system",
-                    "You are a Senior Trading Strategist specializing in Signal Confluence (Concordance). "
-                    "Your task is to review reports from multiple specialized analysts and determine if their signals "
-                    "are in alignment (Concordance) or in conflict.\\n\\n"
-                    "Analysts provided the following reports:\\n"
-                    f"1. MARKET REGIME: {regime_report}\\n"
-                    f"2. TECHNICAL INDICATORS: {indicator_report}\\n"
-                    f"3. PATTERN RECOGNITION: {pattern_report}\\n"
-                    f"4. TREND ANALYSIS: {trend_report}\\n\\n"
-                    "Your assessment must cover:\\n"
-                    "- Alignment: Are the signals (Regime, Indicators, Patterns, Trend) pointing in the same direction?\\n"
-                    "- Conflicts: Identify any contradictory signals (e.g., Bullish Pattern vs. Bearish Regime).\\n"
-                    "- Strength of Confluence: Rate the overall agreement (e.g., Weak, Moderate, Strong).\\n"
-                    "- Key Drivers: What are the primary factors driving the current consensus or lack thereof?\\n\\n"
-                    f"Target Asset: {stock_name} ({time_frame})\\n",
-                ),
+                ("system", system_msg),
                 MessagesPlaceholder(variable_name="messages"),
             ]
+        ).partial(
+            regime_report=regime_report,
+            indicator_report=indicator_report,
+            pattern_report=pattern_report,
+            trend_report=trend_report,
+            stock_name=stock_name,
+            time_frame=time_frame
         )
 
         chain = prompt | llm
@@ -50,7 +58,7 @@ def create_concordance_agent(llm):
             messages = [HumanMessage(content="Synthesize all analyst reports for signal concordance.")]
 
         # Concordance Agent is a reasoning agent, no tools needed for now
-        final_response = chain.invoke(messages)
+        final_response = chain.invoke({"messages": messages})
         messages.append(final_response)
 
         return {

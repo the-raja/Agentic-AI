@@ -98,14 +98,43 @@ def create_trend_agent(tool_llm, graph_llm, toolkit):
 
         # --- Step 3: Vision analysis with image (precomputed or generated) ---
         if trend_image_b64:
+            # Add numerical context to help the vision model stay grounded
+            precalc = state.get("precalculated_indicators", {})
+
+            # --- Extract numerical data for prompt ---
+            adx_latest = "N/A"
+            atr_latest = "N/A"
+            if precalc:
+                # Extract the last value from the precalculated lists
+                adx_data = precalc.get('adx', {})
+                adx_list = adx_data.get('adx', []) if isinstance(adx_data, dict) else adx_data
+                if adx_list and len(adx_list) > 0:
+                    adx_latest = adx_list[-1]
+
+                atr_data = precalc.get('atr', {})
+                atr_list = atr_data.get('atr', []) if isinstance(atr_data, dict) else atr_data
+                if atr_list and len(atr_list) > 0:
+                    atr_latest = atr_list[-1]
+
+            numerical_context = (
+                f"Numerical Trend Context:\n"
+                f"- Latest ADX (Trend Strength): {adx_latest}\n"
+                f"- Latest ATR (Volatility): {atr_latest}\n"
+                f"- Market Overview: {state.get('regime_report', 'N/A')[:300]}...\n"
+            )
+
+
             image_prompt = [
                 {
                     "type": "text",
                     "text": (
-                        f"This candlestick ({time_frame} K-line) chart includes automated trendlines: the **blue line** is support, and the **red line** is resistance, both derived from recent closing prices.\n\n"
-                        "Analyze how price interacts with these lines — are candles bouncing off, breaking through, or compressing between them?\n\n"
-                        "Based on trendline slope, spacing, and recent K-line behavior, predict the likely short-term trend: **upward**, **downward**, or **sideways**. "
-                        "Support your prediction with respect to prediction, reasoning, signals."
+                        f"This {time_frame} candlestick chart for {state.get('stock_name', 'the asset')} includes automated trendlines: **blue** is support, **red** is resistance.\n\n"
+                        f"{numerical_context}\n"
+                        "ANALYSIS TASK:\n"
+                        "1. Examine the price action relative to the blue and red trendlines.\n"
+                        "2. Note if the ADX suggests a strong trend that confirms the visual slope.\n"
+                        "3. Predict the short-term trend: **upward**, **downward**, or **sideways**.\n"
+                        "4. Provide a UNIQUE description of price interaction at the most recent candles. Avoid generic placeholders."
                     ),
                 },
                 {

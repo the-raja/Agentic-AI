@@ -242,7 +242,6 @@ class TechnicalTools:
             bbox_inches="tight",
             pad_inches=0.1,
         )
-        plt.close(fig)
 
         # Add legend manually
         axlist[0].legend(loc="upper left")
@@ -308,7 +307,6 @@ class TechnicalTools:
             bbox_inches="tight",
             pad_inches=0.1,
         )
-        plt.close(fig)
         # ---------- Encode to base64 -----------------
         buf = io.BytesIO()
         fig.savefig(buf, format="png", dpi=600, bbox_inches="tight", pad_inches=0.1)
