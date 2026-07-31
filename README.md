@@ -12,7 +12,19 @@ docker run -p 8080:8080 ghcr.io/the-raja/omniagent:latest
 
 Once running, open **`http://localhost:8080`** in your browser! 🚀
 
+---
+
+### 🔥 What happens when ANYONE types that single command:
+1. Docker downloads your public container `ghcr.io/the-raja/omniagent:latest` from GitHub Container Registry.
+2. Inside the container, Ollama starts automatically in the background.
+3. The container automatically downloads the **`llava` vision model**.
+4. The container launches **OmniAgent** on **`http://localhost:8080`**.
+
+---
+
 ## 🏗 System Architecture
+
+![OmniAgent System Architecture](assets/Architecture_Diagram.png)
 
 ```mermaid
 graph TD
@@ -77,7 +89,7 @@ graph TD
 - [Ollama](https://ollama.com/) (Optional, for running local models like `llava`)
 - API Key(s) for OpenAI, Anthropic, or Qwen (Optional, if using cloud providers)
 
-## ⚙️ Installation
+## ⚙️ Local Setup & Installation
 
 1. **Clone the repository**:
    ```bash
@@ -115,7 +127,7 @@ graph TD
    ```
 
 2. **Access the dashboard**:
-   Open your browser and navigate to `http://127.0.0.1:5000`.
+   Open your browser and navigate to `http://127.0.0.1:8080`.
 
 3. **Run an Analysis**:
    - Select your preferred **LLM Provider** (e.g. `ollama`) in the settings.
