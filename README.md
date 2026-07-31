@@ -4,8 +4,6 @@ OmniAgent is a sophisticated quantitative trading analysis platform that leverag
 
 ## 🏗 System Architecture
 
-![OmniAgent System Architecture](assets/Architecture_Diagram.png)
-
 ```mermaid
 graph TD
     User["👤 Web UI / User Dashboard"] --> DataIngestion["📊 Data Ingestion (Yahoo Finance / Local CSV)"]
