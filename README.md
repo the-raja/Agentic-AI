@@ -2,6 +2,35 @@
 
 OmniAgent is a sophisticated quantitative trading analysis platform that leverages the power of Large Language Models (LLMs) and LangGraph to perform multi-dimensional market analysis. By orchestrating specialized agents, OmniAgent provides comprehensive insights into technical indicators, chart patterns, and market trends to deliver actionable trading decisions.
 
+## 🏗 System Architecture
+
+![OmniAgent System Architecture](assets/architecture_diagram.png)
+
+```mermaid
+graph TD
+    User["👤 Web UI / User Dashboard"] --> DataIngestion["📊 Data Ingestion (Yahoo Finance / Local CSV)"]
+    DataIngestion --> ChartGen["📈 Chart Generators (mplfinance & TA-Lib)"]
+    
+    ChartGen --> StateMachine["⚙️ LangGraph Multi-Agent Orchestrator"]
+    
+    subgraph "Analyst Nodes"
+        StateMachine --> RegimeAgent["🌐 Market Regime Agent"]
+        StateMachine --> IndicatorAgent["📊 Technical Indicator Agent"]
+        StateMachine --> PatternAgent["👁️ Pattern Recognition Agent (Vision AI)"]
+        StateMachine --> TrendAgent["📈 Trend Analysis Agent (Vision AI)"]
+    end
+    
+    RegimeAgent --> ConcordanceAgent["🔗 Signal Concordance Agent"]
+    IndicatorAgent --> ConcordanceAgent
+    PatternAgent --> ConcordanceAgent
+    TrendAgent --> ConcordanceAgent
+    
+    ConcordanceAgent --> ConfidenceAgent["🛡️ Confidence Assessment Agent"]
+    ConfidenceAgent --> DecisionAgent["🎯 Final Trade Decision Maker (LONG / SHORT)"]
+    
+    DecisionAgent --> ReportOutput["📋 Final Analysis Report & Web Output"]
+```
+
 ## 🚀 Features
 
 - **Multi-Agent Orchestration**: Built with **LangGraph**, the system utilizes a collaborative workflow of specialized agents:

@@ -4,6 +4,11 @@ __pycache__/
 venv/
 outputs/
 reports/
-*.png
 *.csv
 .DS_Store
+
+# Ignore runtime generated root images but allow assets directory
+/kline_chart.png
+/trend_graph.png
+/pattern_chart.png
+!assets/
